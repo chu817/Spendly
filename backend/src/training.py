@@ -14,7 +14,9 @@ import pandas as pd
 
 from src.data_loader import get_artifacts, set_artifacts
 from src.features import compute_features
-from src.profiling import fit_profiler, MAX_USERS_FOR_FIT
+from src.profiling import fit_profiler, MAX_USERS_FOR_FIT, get_profile
+from src.scoring import compute_score
+from src.utils import get_risk_band
 
 
 def _percentile(values: List[float], q: float, default: float) -> float:
@@ -72,11 +74,36 @@ def ensure_trained(dataset_id: str, df: pd.DataFrame) -> Dict[str, Any]:
     calibration = fit_score_calibration(features_list)
     fit_profiler(dataset_id, features_list)
 
+    # Compute per-user scores, bands, and cluster labels for global overview insights
+    scores: List[float] = []
+    band_counts: Dict[str, int] = {}
+    cluster_counts: Dict[str, int] = {}
+    for feats in features_list:
+        score, _, band = compute_score(feats, calibration=calibration)
+        scores.append(score)
+        band_label = get_risk_band(score)
+        band_counts[band_label] = band_counts.get(band_label, 0) + 1
+
+        profile = get_profile(dataset_id, feats)
+        label = profile.get("profile_label", "Unknown")
+        cluster_counts[label] = cluster_counts.get(label, 0) + 1
+
+    scores_arr = np.array(scores, dtype=float) if scores else np.array([0.0])
+    global_insights: Dict[str, Any] = {
+        "mean_score": float(scores_arr.mean()),
+        "p50_score": float(np.percentile(scores_arr, 50)),
+        "p75_score": float(np.percentile(scores_arr, 75)),
+        "p90_score": float(np.percentile(scores_arr, 90)),
+        "band_counts": band_counts,
+        "cluster_counts": cluster_counts,
+    }
+
     artifacts = {
         "trained": True,
         "trained_users": len(features_list),
         "trained_seconds": round(time.time() - start, 2),
         "calibration": calibration,
+        "global_insights": global_insights,
     }
     set_artifacts(dataset_id, artifacts)
     return artifacts

@@ -45,6 +45,15 @@ export interface AnalyzeResponse {
   evidence?: string[];
 }
 
+export interface GlobalInsights {
+  mean_score: number;
+  p50_score: number;
+  p75_score: number;
+  p90_score: number;
+  band_counts: Record<string, number>;
+  cluster_counts: Record<string, number>;
+}
+
 export interface Nudge {
   title: string;
   message: string;

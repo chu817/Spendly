@@ -5,6 +5,8 @@ from typing import Dict, Any, List
 
 import pandas as pd
 
+from src.utils import CATEGORY_3_LABELS
+
 # Human-readable labels for components
 COMPONENT_LABELS = {
     "spike": "Spending spikes",
@@ -83,10 +85,17 @@ def build_chart_series(df: pd.DataFrame, features: Dict[str, Any]) -> Dict[str, 
     hour_counts = hours.value_counts().sort_index()
     out["hourly_counts"] = [{"hour": int(h), "count": int(c)} for h, c in hour_counts.items()]
 
-    # Category distribution (category_3 share)
+    # Category distribution (category_3 share) with human-readable labels
     cat3 = df["category_3"].astype(str)
     cat_counts = cat3.value_counts(normalize=True)
-    out["category_distribution"] = [{"category": str(k), "share": float(v)} for k, v in cat_counts.items()]
+    out["category_distribution"] = [
+        {
+            "category": str(k),
+            "label": CATEGORY_3_LABELS.get(str(k), f"Category {k}"),
+            "share": float(v),
+        }
+        for k, v in cat_counts.items()
+    ]
 
     # EOM: last 5 days of month vs rest (aggregate spend)
     month_end = dates + pd.offsets.MonthEnd(0)

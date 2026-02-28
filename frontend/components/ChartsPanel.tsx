@@ -92,7 +92,7 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
           <div style={{ height: 260, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius)", padding: "0.5rem" }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={categoryDist.slice(0, 8)} dataKey="share" nameKey="category" outerRadius={90} label>
+                <Pie data={categoryDist.slice(0, 8)} dataKey="share" nameKey="label" outerRadius={90} label>
                   {categoryDist.slice(0, 8).map((_, i) => (
                     <Cell key={i} fill={pieColors[i % pieColors.length]} />
                   ))}

@@ -1,6 +1,7 @@
 /**
  * API client for impulse finance backend. Base URL from NEXT_PUBLIC_API_URL.
  */
+import type { GlobalInsights } from "./types";
 
 const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? "" : "http://localhost:5000");
 
@@ -18,7 +19,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<{ data?:
   return { data: json.data ?? json };
 }
 
-export async function getDefaultDataset(): Promise<{ data?: { dataset_id: string; rows: number; users: number; date_range: [string, string] }; error?: { code: string; message: string } }> {
+export async function getDefaultDataset(): Promise<{
+  data?: { dataset_id: string; rows: number; users: number; date_range: [string, string]; status: string; global_insights?: GlobalInsights };
+  error?: { code: string; message: string };
+}> {
   return request("/api/default");
 }
 

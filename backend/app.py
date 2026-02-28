@@ -210,7 +210,7 @@ def analyze():
 
 @app.route("/api/default", methods=["GET"])
 def default_dataset():
-    """Return default dataset_id and summary (rows, users, date_range)."""
+    """Return default dataset_id, summary, and global insights when ready."""
     dataset_id = get_default_dataset_id()
     if not dataset_id:
         _ensure_default_dataset_loaded()
@@ -221,6 +221,8 @@ def default_dataset():
             return error_response(_bootstrap_state.get("message") or "Bootstrap failed", "CONFIG_ERROR", 500)
         return success_response({"status": _bootstrap_state["status"], "message": _bootstrap_state.get("message", "")})
     summary = get_summary(dataset_id) or {}
+    artifacts = get_artifacts(dataset_id) or {}
+    insights = artifacts.get("global_insights") or {}
     return success_response(
         {
             "dataset_id": dataset_id,
@@ -228,6 +230,7 @@ def default_dataset():
             "users": summary.get("users"),
             "date_range": summary.get("date_range"),
             "status": "ready",
+            "global_insights": insights,
         }
     )
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { getDefaultDataset } from "@/lib/api";
+import type { GlobalInsights } from "@/lib/types";
 import UserSelector from "@/components/UserSelector";
 
 export default function DashboardPage() {
@@ -10,6 +11,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<{ rows: number; users: number; dateRange: [string, string] } | null>(null);
   const [status, setStatus] = useState<"loading" | "training" | "ready" | "error">("loading");
+  const [insights, setInsights] = useState<GlobalInsights | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,14 +23,16 @@ export default function DashboardPage() {
         setError(res.error.message);
         return;
       }
-      if (!res.data) return;
-      if ((res.data as any).status && (res.data as any).status !== "ready") {
-        setStatus((res.data as any).status);
+      const data = res.data;
+      if (!data) return;
+      if (data.status && data.status !== "ready") {
+        setStatus(data.status as any);
         setTimeout(tick, 1500);
         return;
       }
       setStatus("ready");
-      setSummary({ rows: res.data.rows, users: res.data.users, dateRange: res.data.date_range });
+      setSummary({ rows: data.rows, users: data.users, dateRange: data.date_range });
+      if (data.global_insights) setInsights(data.global_insights);
     };
     tick();
     return () => {
@@ -77,11 +81,35 @@ export default function DashboardPage() {
           </aside>
 
           <section className="card panel">
-            <h2 className="panelTitle">How this works</h2>
-            <p className="muted" style={{ marginTop: "0.25rem" }}>
-              Choose a <strong>card_id</strong> to view an impulse risk score (0–100), a cluster-based persona, top drivers, nudges, and evidence charts.
-              The system uses interpretable indicators like spikes, bursts, end-of-month surges, and timing triggers.
-            </p>
+            <h2 className="panelTitle">Overview</h2>
+            {insights ? (
+              <>
+                <p className="muted" style={{ marginBottom: "0.75rem" }}>
+                  Average impulse score <strong>{Math.round(insights.mean_score)}</strong> (p50 {Math.round(insights.p50_score)}, p75{" "}
+                  {Math.round(insights.p75_score)}, p90 {Math.round(insights.p90_score)}).
+                </p>
+                <div style={{ display: "flex", gap: 8, marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                  {Object.entries(insights.band_counts).map(([band, count]) => (
+                    <span key={band} className="pill">
+                      {band}: {count}
+                    </span>
+                  ))}
+                </div>
+                <h3 className="panelTitle" style={{ marginTop: "0.5rem" }}>Personas in this dataset</h3>
+                <ul style={{ listStyle: "none", marginTop: 4 }}>
+                  {Object.entries(insights.cluster_counts).map(([label, count]) => (
+                    <li key={label} className="muted" style={{ fontSize: "0.9rem", marginBottom: 2 }}>
+                      <strong>{label}</strong> · {count} users
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="muted">
+                The system computes dataset-wide indicators and personas from transaction patterns. Once ready, you can drill down into individual
+                cards for personalised insights.
+              </p>
+            )}
             <div style={{ marginTop: "1rem" }}>
               <Link className="linkMuted" href="https://www.kaggle.com/c/elo-merchant-category-recommendation" target="_blank">
                 Dataset reference

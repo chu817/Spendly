@@ -33,6 +33,17 @@ PROFILE_LABELS = {
     4: "Category-loyal spender",
 }
 
+# Plausible human-readable labels for Elo category_3 codes
+CATEGORY_3_LABELS = {
+    "A": "Everyday essentials & groceries",
+    "B": "Eating out & cafés",
+    "C": "Entertainment & streaming",
+    "D": "Online shopping & retail",
+    "E": "Travel & transport",
+    "F": "Bills & utilities",
+    "G": "Health & wellness",
+}
+
 # Component names for scoring (must match keys used in scoring.py)
 COMPONENT_WEIGHTS = {
     "spike": 0.25,
@@ -71,9 +82,20 @@ def safe_numeric(series: pd.Series) -> pd.Series:
 
 
 def get_risk_band(score: float) -> str:
-    """Map numeric score (0-100) to risk band label."""
-    score = max(0, min(100, score))
-    for lo, hi, label in RISK_BANDS:
-        if lo <= score <= hi:
-            return label
-    return "Low"
+    """Map numeric score (0-100) to risk band label.
+
+    Uses continuous ranges with no gaps so higher scores cannot fall back to Low.
+    Current policy (from spec):
+    - 0–25   -> Low
+    - 25–50  -> Medium
+    - 50–75  -> High
+    - 75–100 -> Critical
+    """
+    score = float(max(0.0, min(100.0, score)))
+    if score < 25:
+        return "Low"
+    if score < 50:
+        return "Medium"
+    if score < 75:
+        return "High"
+    return "Critical"

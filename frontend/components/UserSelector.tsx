@@ -14,6 +14,7 @@ interface UserItem {
 
 export default function UserSelector({ onSelect }: UserSelectorProps) {
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [displayUsers, setDisplayUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -23,8 +24,50 @@ export default function UserSelector({ onSelect }: UserSelectorProps) {
       if (res.error) {
         setError(res.error.message);
         setUsers([]);
+        setDisplayUsers([]);
       } else if (res.data?.users) {
-        setUsers(res.data.users);
+        const all = res.data.users;
+        setUsers(all);
+        // Build a varied sample of up to 200 users:
+        // - sort by tx_count
+        // - split into low / mid / high bands
+        // - randomly sample from each band to balance high / medium / low spenders
+        if (all.length <= 200) {
+          setDisplayUsers(all);
+        } else {
+          const sorted = [...all].sort(
+            (a, b) => (a.tx_count ?? 0) - (b.tx_count ?? 0)
+          );
+          const third = Math.floor(sorted.length / 3);
+          const low = sorted.slice(0, third);
+          const mid = sorted.slice(third, 2 * third);
+          const high = sorted.slice(2 * third);
+
+          const pickRandom = (arr: UserItem[], n: number) => {
+            const copy = [...arr];
+            const out: UserItem[] = [];
+            while (copy.length && out.length < n) {
+              const idx = Math.floor(Math.random() * copy.length);
+              out.push(copy.splice(idx, 1)[0]);
+            }
+            return out;
+          };
+
+          const targetEach = Math.floor(200 / 3);
+          let sample: UserItem[] = [
+            ...pickRandom(low, targetEach),
+            ...pickRandom(mid, targetEach),
+            ...pickRandom(high, targetEach),
+          ];
+
+          if (sample.length < 200) {
+            const inSample = new Set(sample.map((u) => u.card_id));
+            const remaining = sorted.filter((u) => !inSample.has(u.card_id));
+            sample = [...sample, ...pickRandom(remaining, 200 - sample.length)];
+          }
+
+          setDisplayUsers(sample);
+        }
       }
       setLoading(false);
     });
@@ -32,7 +75,7 @@ export default function UserSelector({ onSelect }: UserSelectorProps) {
 
   const filtered = search
     ? users.filter((u) => u.card_id.toLowerCase().includes(search.toLowerCase()))
-    : users.slice(0, 200);
+    : displayUsers;
 
   if (loading) {
     return <p style={{ color: "var(--color-text-muted)" }}>Loading users…</p>;
