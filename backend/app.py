@@ -17,6 +17,7 @@ from src.data_loader import (
     get_summary,
     get_default_dataset_id,
     set_default_dataset_id,
+    get_artifacts,
 )
 from src.features import compute_features
 from src.scoring import compute_score

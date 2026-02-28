@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { analyze, getNudges } from "@/lib/api";
 import type { AnalyzeResponse, AnalysisSummary } from "@/lib/types";
+import Layout from "@/components/Layout";
 import ScoreGauge from "@/components/ScoreGauge";
 import ProfileBadge from "@/components/ProfileBadge";
 import DriverBreakdown from "@/components/DriverBreakdown";
@@ -49,9 +50,9 @@ export default function UserDashboardPage() {
     return (
       <>
         <Head><title>Analysis – Impulse Finance</title></Head>
-        <main style={{ minHeight: "100vh", padding: "2rem", maxWidth: 1000, margin: "0 auto" }}>
+        <Layout>
           <p style={{ color: "var(--color-text-muted)" }}>Loading analysis…</p>
-        </main>
+        </Layout>
       </>
     );
   }
@@ -59,10 +60,12 @@ export default function UserDashboardPage() {
     return (
       <>
         <Head><title>Error – Impulse Finance</title></Head>
-        <main style={{ minHeight: "100vh", padding: "2rem", maxWidth: 1000, margin: "0 auto" }}>
+        <Layout>
           <p style={{ color: "var(--color-risk-critical)" }}>{error || "Analysis failed."}</p>
-          <Link href="/dashboard" style={{ display: "inline-block", marginTop: "1rem", color: "var(--color-text-muted)" }}>Back to dashboard</Link>
-        </main>
+          <Link href="/dashboard" className="pill" style={{ display: "inline-block", marginTop: "1rem" }}>
+            Back to dashboard
+          </Link>
+        </Layout>
       </>
     );
   }
@@ -73,20 +76,20 @@ export default function UserDashboardPage() {
         <title>{cardId} – Spendly</title>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
-      <main className="appShell">
-        <header className="appHeader">
+      <Layout>
+        <header className="appHeader" style={{ marginBottom: 24 }}>
           <div>
-            <h1 className="appTitle">User profile</h1>
+            <h1 className="appTitle">User Profile</h1>
             <p className="appSubtitle">
               Card: <strong>{cardId}</strong> · Interpretable behavioural indicators (not a diagnosis)
             </p>
           </div>
           <Link href="/dashboard" className="pill">
-            Back to users
+            Back to Dashboard
           </Link>
         </header>
 
-        <div className="appGrid" style={{ gridTemplateColumns: "1fr" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <section className="card panel" aria-label="Risk score">
             <ScoreGauge score={analysis.risk_score} riskBand={analysis.risk_band} />
           </section>
@@ -120,7 +123,7 @@ export default function UserDashboardPage() {
             <ChartsPanel chartSeries={analysis.chart_series} />
           </section>
         </div>
-      </main>
+      </Layout>
     </>
   );
 }

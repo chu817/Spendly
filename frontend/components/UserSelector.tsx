@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState, useMemo } from "react";
 import { getUsers } from "@/lib/api";
 import { formatDateRange } from "@/lib/utils";
 
 interface UserSelectorProps {
-  onSelect: (cardId: string) => void;
+  onSelect?: (cardId: string) => void;
 }
 
 interface UserItem {
@@ -12,12 +13,25 @@ interface UserItem {
   date_range?: [string, string];
 }
 
-export default function UserSelector({ onSelect }: UserSelectorProps) {
+type TxCountFilter = "all" | "low" | "medium" | "high";
+
+function getTxCountBand(
+  txCount: number,
+  p33: number,
+  p66: number
+): "low" | "medium" | "high" {
+  if (txCount <= p33) return "low";
+  if (txCount <= p66) return "medium";
+  return "high";
+}
+
+export default function UserSelector({ onSelect: onSelectProp }: UserSelectorProps) {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [displayUsers, setDisplayUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [txCountFilter, setTxCountFilter] = useState<TxCountFilter>("all");
 
   useEffect(() => {
     getUsers().then((res) => {
@@ -28,10 +42,6 @@ export default function UserSelector({ onSelect }: UserSelectorProps) {
       } else if (res.data?.users) {
         const all = res.data.users;
         setUsers(all);
-        // Build a varied sample of up to 200 users:
-        // - sort by tx_count
-        // - split into low / mid / high bands
-        // - randomly sample from each band to balance high / medium / low spenders
         if (all.length <= 200) {
           setDisplayUsers(all);
         } else {
@@ -73,74 +83,170 @@ export default function UserSelector({ onSelect }: UserSelectorProps) {
     });
   }, []);
 
-  const filtered = search
-    ? users.filter((u) => u.card_id.toLowerCase().includes(search.toLowerCase()))
-    : displayUsers;
+  const { p33, p66 } = useMemo(() => {
+    const counts = users
+      .map((u) => u.tx_count ?? 0)
+      .filter((c) => c > 0)
+      .sort((a, b) => a - b);
+    if (counts.length === 0) return { p33: 0, p66: 0 };
+    const i33 = Math.floor(counts.length * 0.33);
+    const i66 = Math.floor(counts.length * 0.66);
+    return {
+      p33: counts[i33] ?? 0,
+      p66: counts[i66] ?? 0,
+    };
+  }, [users]);
+
+  const filtered = useMemo(() => {
+    let result = search
+      ? users.filter((u) =>
+          u.card_id.toLowerCase().includes(search.toLowerCase())
+        )
+      : displayUsers;
+
+    if (txCountFilter !== "all") {
+      result = result.filter((u) => {
+        const count = u.tx_count ?? 0;
+        const band = getTxCountBand(count, p33, p66);
+        return band === txCountFilter;
+      });
+    }
+
+    return result;
+  }, [search, users, displayUsers, txCountFilter, p33, p66]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setTxCountFilter("all");
+  };
 
   if (loading) {
-    return <p style={{ color: "var(--color-text-muted)" }}>Loading users…</p>;
+    return (
+      <div className="dataTableCard" style={{ padding: 24 }}>
+        <p style={{ color: "var(--color-text-muted)" }}>Loading users…</p>
+      </div>
+    );
   }
   if (error) {
-    return <p style={{ color: "var(--color-risk-critical)" }} role="alert">{error}</p>;
+    return (
+      <div className="dataTableCard" style={{ padding: 24 }}>
+        <p style={{ color: "var(--color-risk-critical)", fontSize: "0.9rem" }} role="alert">
+          {error === "Not found" || error === "Not Found"
+            ? "Backend or dataset not available. Ensure the Flask server is running and the dataset has loaded."
+            : error}
+        </p>
+      </div>
+    );
   }
   if (users.length === 0) {
-    return <p style={{ color: "var(--color-text-muted)" }}>No users in this dataset.</p>;
+    return (
+      <div className="dataTableCard" style={{ padding: 24 }}>
+        <p style={{ color: "var(--color-text-muted)" }}>No users in this dataset.</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ marginBottom: "1rem" }}>
-      <label htmlFor="user-search" style={{ display: "block", marginBottom: "0.5rem", fontSize: "0.9rem" }}>
-        Search by card ID
-      </label>
-      <input
-        id="user-search"
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="e.g. C_ID_..."
-        aria-label="Search users by card ID"
-        style={{
-          width: "100%",
-          maxWidth: 400,
-          padding: "0.5rem 0.75rem",
-          background: "var(--color-bg)",
-          border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius)",
-          color: "inherit",
-          marginBottom: "0.75rem",
-        }}
-      />
-      <ul style={{ listStyle: "none" }}>
-        {filtered.map((u) => (
-          <li key={u.card_id} style={{ marginBottom: "0.5rem" }}>
-            <button
-              type="button"
-              onClick={() => onSelect(u.card_id)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "0.6rem 0.75rem",
-                background: "var(--color-surface)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "var(--radius)",
-                color: "inherit",
-                cursor: "pointer",
-              }}
-            >
-              <span style={{ fontWeight: 500 }}>{u.card_id}</span>
-              {u.tx_count != null && (
-                <span style={{ marginLeft: "0.5rem", color: "var(--color-text-muted)", fontSize: "0.85rem" }}>
-                  {u.tx_count} tx
-                  {u.date_range && ` · ${formatDateRange(u.date_range[0], u.date_range[1])}`}
-                </span>
-              )}
-            </button>
-          </li>
-        ))}
-      </ul>
-      {users.length > 200 && !search && (
-        <p style={{ color: "var(--color-text-muted)", fontSize: "0.85rem" }}>Showing first 200. Use search to find others.</p>
-      )}
+    <div>
+      <div className="searchFilterBar">
+        <div className="searchBar">
+          <span style={{ color: "var(--color-text-muted)" }} aria-hidden>⌕</span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by card ID..."
+            aria-label="Search users by card ID"
+          />
+        </div>
+        <select
+          className="filterSelect"
+          disabled
+          aria-label="Filter by risk band (placeholder)"
+        >
+          <option>All Risk Bands</option>
+        </select>
+        <select
+          className="filterSelect"
+          disabled
+          aria-label="Filter by persona (placeholder)"
+        >
+          <option>All Personas</option>
+        </select>
+        <select
+          className="filterSelect"
+          value={txCountFilter}
+          onChange={(e) => setTxCountFilter(e.target.value as TxCountFilter)}
+          aria-label="Filter by transaction count"
+        >
+          <option value="all">All Tx Count</option>
+          <option value="low">Low activity</option>
+          <option value="medium">Medium activity</option>
+          <option value="high">High activity</option>
+        </select>
+        <button
+          type="button"
+          className="filterReset"
+          onClick={handleResetFilters}
+          aria-label="Reset filters"
+        >
+          <span aria-hidden>↻</span>
+          Reset Filters
+        </button>
+        <p className="muted" style={{ fontSize: 12, width: "100%", margin: 0 }}>
+          Dataset loads at startup. Training may take a minute.
+        </p>
+      </div>
+
+      <div className="dataTableCard">
+        <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          <table className="dataTable">
+            <thead>
+              <tr>
+                <th>Card ID</th>
+                <th>Tx Count</th>
+                <th>Date Range</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => (
+                <tr key={u.card_id} className="dataRow">
+                  <td>
+                    <span style={{ fontWeight: 500 }}>{u.card_id}</span>
+                  </td>
+                  <td>{u.tx_count != null ? u.tx_count.toLocaleString() : "—"}</td>
+                  <td className="muted">
+                    {u.date_range
+                      ? formatDateRange(u.date_range[0], u.date_range[1])
+                      : "—"}
+                  </td>
+                  <td>
+                    <Link
+                      href={`/dashboard/${encodeURIComponent(u.card_id)}`}
+                      className="btnViewProfile"
+                    >
+                      View Profile
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {users.length > 200 && !search && (
+          <p
+            className="muted"
+            style={{
+              fontSize: "0.85rem",
+              padding: "12px 16px",
+              borderTop: "1px solid var(--color-border)",
+            }}
+          >
+            Showing sample of 200. Use search to find others.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

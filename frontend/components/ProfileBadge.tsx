@@ -7,29 +7,25 @@ interface ProfileBadgeProps {
 export default function ProfileBadge({ profile }: ProfileBadgeProps) {
   return (
     <div>
-      <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Spending behaviour profile</h2>
+      <h2 className="panelTitle" style={{ marginBottom: 12 }}>
+        Spending behaviour profile
+      </h2>
       <div
         style={{
-          padding: "1rem",
-          background: "var(--color-surface)",
+          padding: "1.25rem",
+          background: "var(--color-bg)",
           border: "1px solid var(--color-border)",
-          borderRadius: "var(--radius)",
+          borderRadius: "var(--radius-lg)",
+          transition: "border-color 0.2s",
         }}
       >
         <span
-          style={{
-            display: "inline-block",
-            padding: "0.25rem 0.5rem",
-            background: "var(--color-border)",
-            borderRadius: "var(--radius)",
-            fontSize: "0.9rem",
-            fontWeight: 600,
-            marginBottom: "0.5rem",
-          }}
+          className="statusBadge statusBadgeMedium"
+          style={{ marginBottom: "0.75rem", display: "inline-block" }}
         >
           {profile.profile_label}
         </span>
-        <p style={{ marginTop: "0.5rem", color: "var(--color-text-muted)", fontSize: "0.95rem" }}>
+        <p style={{ margin: 0, color: "var(--color-text-muted)", fontSize: "0.95rem", lineHeight: 1.6 }}>
           {profile.interpretation}
         </p>
       </div>

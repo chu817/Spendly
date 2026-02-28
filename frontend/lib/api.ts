@@ -3,7 +3,8 @@
  */
 import type { GlobalInsights } from "./types";
 
-const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? "" : "http://localhost:5000");
+const DEFAULT_API_URL = "http://localhost:5001";
+const getBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
 
 async function request<T>(path: string, options?: RequestInit): Promise<{ data?: T; error?: { code: string; message: string } }> {
   const url = `${getBaseUrl()}${path}`;
