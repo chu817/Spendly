@@ -1,4 +1,19 @@
 import type { ChartSeries } from "@/lib/types";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 interface ChartsPanelProps {
   chartSeries: ChartSeries;
@@ -19,6 +34,14 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
   const categoryDist = chartSeries.category_distribution || [];
   const eom = chartSeries.eom_comparison;
 
+  const pieColors = [
+    "var(--color-risk-low)",
+    "var(--color-risk-medium)",
+    "var(--color-risk-high)",
+    "var(--color-risk-critical)",
+    "var(--color-border)",
+  ];
+
   return (
     <div>
       <h2 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>Evidence charts</h2>
@@ -28,26 +51,16 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
           <h3 style={{ fontSize: "0.95rem", marginBottom: "0.5rem", color: "var(--color-text-muted)" }}>
             Daily spend
           </h3>
-          <div style={{ height: 200, overflowX: "auto" }}>
-            <svg width={Math.max(600, dailySpend.length * 8)} height={200} style={{ minWidth: "100%" }}>
-              {(() => {
-                const values = dailySpend.map((d) => d.value);
-                const maxV = Math.max(...values, 1);
-                const w = Math.max(4, 600 / dailySpend.length);
-                return dailySpend.map((d, i) => (
-                  <g key={i}>
-                    <rect
-                      x={i * w}
-                      y={200 - (d.value / maxV) * 180}
-                      width={w - 1}
-                      height={(d.value / maxV) * 180}
-                      fill={d.is_spike ? "var(--color-risk-high)" : "var(--color-border)"}
-                      rx={2}
-                    />
-                  </g>
-                ));
-              })()}
-            </svg>
+          <div style={{ height: 260, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius)", padding: "0.5rem" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailySpend}>
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
+                <XAxis dataKey="date" hide />
+                <YAxis tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }} />
+                <Line type="monotone" dataKey="value" stroke="var(--color-risk-low)" dot={false} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </section>
       )}
@@ -57,28 +70,16 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
           <h3 style={{ fontSize: "0.95rem", marginBottom: "0.5rem", color: "var(--color-text-muted)" }}>
             Hour of day
           </h3>
-          <div style={{ height: 180, overflowX: "auto" }}>
-            <svg width={600} height={180} viewBox="0 0 600 180" preserveAspectRatio="none">
-              {(() => {
-                const maxC = Math.max(...hourlyCounts.map((h) => h.count), 1);
-                const barW = 600 / 24;
-                return Array.from({ length: 24 }, (_, h) => {
-                  const item = hourlyCounts.find((x) => x.hour === h);
-                  const count = item?.count ?? 0;
-                  return (
-                    <rect
-                      key={h}
-                      x={(h / 24) * 600}
-                      y={180 - (count / maxC) * 160}
-                      width={barW - 2}
-                      height={(count / maxC) * 160}
-                      fill="var(--color-border)"
-                      rx={2}
-                    />
-                  );
-                });
-              })()}
-            </svg>
+          <div style={{ height: 240, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius)", padding: "0.5rem" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={hourlyCounts}>
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
+                <XAxis dataKey="hour" tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} />
+                <YAxis tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }} />
+                <Bar dataKey="count" fill="var(--color-border)" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </section>
       )}
@@ -88,14 +89,19 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
           <h3 style={{ fontSize: "0.95rem", marginBottom: "0.5rem", color: "var(--color-text-muted)" }}>
             Category distribution
           </h3>
-          <ul style={{ listStyle: "none", fontSize: "0.9rem" }}>
-            {categoryDist.slice(0, 10).map((c, i) => (
-              <li key={i} style={{ marginBottom: "0.25rem" }}>
-                <span style={{ marginRight: "0.5rem" }}>{c.category}</span>
-                <span style={{ color: "var(--color-text-muted)" }}>{Math.round(c.share * 100)}%</span>
-              </li>
-            ))}
-          </ul>
+          <div style={{ height: 260, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius)", padding: "0.5rem" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={categoryDist.slice(0, 8)} dataKey="share" nameKey="category" outerRadius={90} label>
+                  {categoryDist.slice(0, 8).map((_, i) => (
+                    <Cell key={i} fill={pieColors[i % pieColors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </section>
       )}
 
@@ -104,10 +110,22 @@ export default function ChartsPanel({ chartSeries }: ChartsPanelProps) {
           <h3 style={{ fontSize: "0.95rem", marginBottom: "0.5rem", color: "var(--color-text-muted)" }}>
             Last 5 days of month vs rest
           </h3>
-          <p style={{ fontSize: "0.9rem" }}>
-            Last 5 days: <strong>{eom.last_5_days.toFixed(1)}</strong> · Rest of month:{" "}
-            <strong>{eom.rest_of_month.toFixed(1)}</strong>
-          </p>
+          <div style={{ height: 200, background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: "var(--radius)", padding: "0.5rem" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { bucket: "Last 5 days", value: eom.last_5_days },
+                  { bucket: "Rest of month", value: eom.rest_of_month },
+                ]}
+              >
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
+                <XAxis dataKey="bucket" tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} />
+                <YAxis tick={{ fill: "var(--color-text-muted)", fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: "var(--color-bg)", border: "1px solid var(--color-border)" }} />
+                <Bar dataKey="value" fill="var(--color-risk-medium)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </section>
       )}
     </div>

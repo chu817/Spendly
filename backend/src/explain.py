@@ -59,12 +59,14 @@ def build_chart_series(df: pd.DataFrame, features: Dict[str, Any]) -> Dict[str, 
     dates = pd.to_datetime(df["purchase_date"])
     amounts = pd.to_numeric(df["purchase_amount"], errors="coerce").fillna(0).abs()
 
-    # Daily spend (with spike marker: day is spike if z-score > 2)
+    # Daily spend (cap to last 365 points for UI performance; with spike marker: z-score > 2)
     df_day = df.copy()
     df_day["date"] = dates.dt.date
     daily = df_day.groupby("date").agg(
         value=("purchase_amount", lambda x: pd.to_numeric(x, errors="coerce").abs().sum()),
     ).reset_index()
+    if len(daily) > 365:
+        daily = daily.iloc[-365:].reset_index(drop=True)
     daily["date"] = daily["date"].astype(str)
     if len(daily) >= 2:
         mean_s, std_s = daily["value"].mean(), daily["value"].std()

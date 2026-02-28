@@ -17,8 +17,9 @@ from src.utils import (
 
 logger = logging.getLogger(__name__)
 
-# In-memory store: dataset_id -> { "df": DataFrame, "summary": {...} }
+# In-memory store: dataset_id -> { "df": DataFrame, "summary": {...}, "artifacts": {...} }
 _datasets: dict[str, dict[str, Any]] = {}
+_default_dataset_id: Optional[str] = None
 
 # Max rows to load per dataset (avoid OOM on huge CSV)
 MAX_ROWS_DEFAULT = 500_000
@@ -82,6 +83,7 @@ def load_upload(
     _datasets[dataset_id] = {
         "df": df,
         "summary": {"rows": rows, "users": n_users, "date_range": date_range, "card_ids": card_ids},
+        "artifacts": {"trained": False, "calibration": None},
     }
     return dataset_id, rows, n_users, date_range, df
 
@@ -93,6 +95,17 @@ def load_demo(demo_path: str, max_rows: Optional[int] = None) -> Tuple[str, int,
         raise FileNotFoundError(f"Demo dataset not found: {demo_path}")
     dataset_id, rows, n_users, date_range, _ = load_upload(path, max_rows=max_rows or MAX_ROWS_DEFAULT)
     return dataset_id, rows, n_users, date_range
+
+
+def set_default_dataset_id(dataset_id: str) -> None:
+    """Set default dataset_id used when API callers omit dataset_id."""
+    global _default_dataset_id
+    _default_dataset_id = dataset_id
+
+
+def get_default_dataset_id() -> Optional[str]:
+    """Get default dataset_id, if set."""
+    return _default_dataset_id
 
 
 def get_dataset(dataset_id: str) -> Optional[pd.DataFrame]:
@@ -109,6 +122,20 @@ def get_summary(dataset_id: str) -> Optional[dict]:
     if entry is None:
         return None
     return entry["summary"]
+
+
+def get_artifacts(dataset_id: str) -> Optional[dict]:
+    """Return artifacts dict for dataset_id or None."""
+    entry = _datasets.get(dataset_id)
+    if entry is None:
+        return None
+    return entry.get("artifacts")
+
+
+def set_artifacts(dataset_id: str, artifacts: dict) -> None:
+    """Set artifacts dict for dataset_id."""
+    if dataset_id in _datasets:
+        _datasets[dataset_id]["artifacts"] = artifacts
 
 
 def get_user_transactions(dataset_id: str, card_id: str) -> Optional[pd.DataFrame]:

@@ -3,7 +3,6 @@ import { getUsers } from "@/lib/api";
 import { formatDateRange } from "@/lib/utils";
 
 interface UserSelectorProps {
-  datasetId: string;
   onSelect: (cardId: string) => void;
 }
 
@@ -13,14 +12,14 @@ interface UserItem {
   date_range?: [string, string];
 }
 
-export default function UserSelector({ datasetId, onSelect }: UserSelectorProps) {
+export default function UserSelector({ onSelect }: UserSelectorProps) {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    getUsers(datasetId).then((res) => {
+    getUsers().then((res) => {
       if (res.error) {
         setError(res.error.message);
         setUsers([]);
@@ -29,7 +28,7 @@ export default function UserSelector({ datasetId, onSelect }: UserSelectorProps)
       }
       setLoading(false);
     });
-  }, [datasetId]);
+  }, []);
 
   const filtered = search
     ? users.filter((u) => u.card_id.toLowerCase().includes(search.toLowerCase()))

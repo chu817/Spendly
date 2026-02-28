@@ -59,6 +59,7 @@ If you change the backend port, also update `NEXT_PUBLIC_API_URL` (example: `htt
 ## Usage
 
 1. **Upload / Load data** – Upload a CSV with columns `card_id`, `purchase_date`, `purchase_amount`, `category_1`, `category_2`, `category_3`, or use **Use demo dataset** (requires `DEMO_DATASET_PATH`).
+2. **Train** – After upload, the app fits unsupervised dataset artifacts (normalization calibration + clustering). This uses only aggregated per-user features (no labels required).
 2. **Select a user** – Choose a `card_id` from the dashboard.
 3. **View results** – Impulse risk score, behaviour profile, top drivers, evidence, nudges, and charts (daily spend, hour-of-day, category distribution, EOM comparison).
 

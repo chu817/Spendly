@@ -18,6 +18,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<{ data?:
   return { data: json.data ?? json };
 }
 
+export async function getDefaultDataset(): Promise<{ data?: { dataset_id: string; rows: number; users: number; date_range: [string, string] }; error?: { code: string; message: string } }> {
+  return request("/api/default");
+}
+
 export async function uploadDataset(file: File): Promise<{ data?: { dataset_id: string; rows: number; users: number; date_range: [string, string] }; error?: { code: string; message: string } }> {
   const form = new FormData();
   form.append("file", file);
@@ -32,12 +36,21 @@ export async function useDemoDataset(): Promise<{ data?: { dataset_id: string; r
   return request("/api/upload?demo=1", { method: "POST" });
 }
 
-export async function getUsers(datasetId: string): Promise<{ data?: { users: Array<{ card_id: string; tx_count?: number; date_range?: [string, string] }> }; error?: { code: string; message: string } }> {
-  return request(`/api/users?dataset_id=${encodeURIComponent(datasetId)}`);
+export async function trainDataset(datasetId: string): Promise<{ data?: { dataset_id: string; artifacts: any }; error?: { code: string; message: string } }> {
+  return request("/api/train", {
+    method: "POST",
+    body: JSON.stringify({ dataset_id: datasetId }),
+  });
 }
 
-export async function analyze(datasetId: string, cardId: string): Promise<{ data?: import("./types").AnalyzeResponse; error?: { code: string; message: string } }> {
-  return request(`/api/analyze?dataset_id=${encodeURIComponent(datasetId)}&card_id=${encodeURIComponent(cardId)}`);
+export async function getUsers(datasetId?: string): Promise<{ data?: { users: Array<{ card_id: string; tx_count?: number; date_range?: [string, string] }> }; error?: { code: string; message: string } }> {
+  const qs = datasetId ? `?dataset_id=${encodeURIComponent(datasetId)}` : "";
+  return request(`/api/users${qs}`);
+}
+
+export async function analyze(cardId: string, datasetId?: string): Promise<{ data?: import("./types").AnalyzeResponse; error?: { code: string; message: string } }> {
+  const qs = datasetId ? `dataset_id=${encodeURIComponent(datasetId)}&` : "";
+  return request(`/api/analyze?${qs}card_id=${encodeURIComponent(cardId)}`);
 }
 
 export async function getNudges(analysisSummary: import("./types").AnalysisSummary): Promise<{ data?: { nudges: import("./types").Nudge[] }; error?: { code: string; message: string } }> {

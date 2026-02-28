@@ -2,23 +2,42 @@ import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { getUsers } from "@/lib/api";
+import { getDefaultDataset } from "@/lib/api";
 import UserSelector from "@/components/UserSelector";
 
 export default function DashboardPage() {
   const router = useRouter();
-  const datasetId = typeof router.query.dataset_id === "string" ? router.query.dataset_id : null;
   const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<{ rows: number; users: number; dateRange: [string, string] } | null>(null);
+  const [status, setStatus] = useState<"loading" | "training" | "ready" | "error">("loading");
 
   useEffect(() => {
-    if (!datasetId) return;
-    getUsers(datasetId).then((res) => {
-      if (res.error) setError(res.error.message);
-    });
-  }, [datasetId]);
+    let cancelled = false;
+    const tick = async () => {
+      const res = await getDefaultDataset();
+      if (cancelled) return;
+      if (res.error) {
+        setStatus("error");
+        setError(res.error.message);
+        return;
+      }
+      if (!res.data) return;
+      if ((res.data as any).status && (res.data as any).status !== "ready") {
+        setStatus((res.data as any).status);
+        setTimeout(tick, 1500);
+        return;
+      }
+      setStatus("ready");
+      setSummary({ rows: res.data.rows, users: res.data.users, dateRange: res.data.date_range });
+    };
+    tick();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSelect = (cardId: string) => {
-    if (datasetId) router.push(`/dashboard/${encodeURIComponent(cardId)}?dataset_id=${encodeURIComponent(datasetId)}`);
+    router.push(`/dashboard/${encodeURIComponent(cardId)}`);
   };
 
   return (
@@ -27,22 +46,49 @@ export default function DashboardPage() {
         <title>Dashboard – Impulse Finance</title>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
-      <main style={{ minHeight: "100vh", padding: "2rem", maxWidth: 900, margin: "0 auto" }}>
-        <h1 style={{ fontSize: "1.75rem", marginBottom: "0.5rem" }}>Dashboard</h1>
-        <p style={{ color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>
-          Select a user to view impulse risk score, behaviour profile, and nudges.
-        </p>
-        {!datasetId ? (
-          <p style={{ color: "var(--color-text-muted)" }}>Missing dataset. Go back to upload.</p>
-        ) : (
-          <>
-            {error && <p style={{ color: "var(--color-risk-critical)", marginBottom: "1rem" }} role="alert">{error}</p>}
-            <UserSelector datasetId={datasetId} onSelect={handleSelect} />
-          </>
-        )}
-        <Link href="/" style={{ display: "inline-block", marginTop: "1.5rem", color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
-          Back to upload
-        </Link>
+      <main className="appShell">
+        <header className="appHeader">
+          <div>
+            <h1 className="appTitle">Spendly</h1>
+            <p className="appSubtitle">Impulse behaviour insights from transaction patterns (not a diagnosis).</p>
+          </div>
+          <div className="pill">Dataset: Elo historical_transactions.csv</div>
+        </header>
+
+        <div className="appGrid">
+          <aside className="card panel">
+            <h2 className="panelTitle">Select a user</h2>
+            {summary && (
+              <p className="muted" style={{ marginBottom: "0.75rem" }}>
+                {summary.users.toLocaleString()} users · {summary.rows.toLocaleString()} rows · {summary.dateRange[0]} – {summary.dateRange[1]}
+              </p>
+            )}
+            {status !== "ready" && !error && (
+              <p className="muted" style={{ marginBottom: "0.75rem" }}>
+                Preparing model… {status === "training" ? "training features" : "loading dataset"}
+              </p>
+            )}
+            {error && (
+              <p style={{ color: "var(--color-risk-critical)", marginBottom: "0.75rem" }} role="alert">
+                {error}
+              </p>
+            )}
+            {status === "ready" ? <UserSelector onSelect={handleSelect} /> : null}
+          </aside>
+
+          <section className="card panel">
+            <h2 className="panelTitle">How this works</h2>
+            <p className="muted" style={{ marginTop: "0.25rem" }}>
+              Choose a <strong>card_id</strong> to view an impulse risk score (0–100), a cluster-based persona, top drivers, nudges, and evidence charts.
+              The system uses interpretable indicators like spikes, bursts, end-of-month surges, and timing triggers.
+            </p>
+            <div style={{ marginTop: "1rem" }}>
+              <Link className="linkMuted" href="https://www.kaggle.com/c/elo-merchant-category-recommendation" target="_blank">
+                Dataset reference
+              </Link>
+            </div>
+          </section>
+        </div>
       </main>
     </>
   );

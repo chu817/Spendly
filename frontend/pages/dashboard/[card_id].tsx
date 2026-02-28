@@ -12,7 +12,6 @@ import ChartsPanel from "@/components/ChartsPanel";
 
 export default function UserDashboardPage() {
   const router = useRouter();
-  const datasetId = typeof router.query.dataset_id === "string" ? router.query.dataset_id : null;
   const cardId = typeof router.query.card_id === "string" ? router.query.card_id : null;
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [nudgeList, setNudgeList] = useState<Array<{ title: string; message: string; why_this: string; action_step: string; confidence: number }>>([]);
@@ -20,10 +19,10 @@ export default function UserDashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!datasetId || !cardId) return;
+    if (!cardId) return;
     setLoading(true);
     setError(null);
-    analyze(datasetId, cardId).then((res) => {
+    analyze(cardId).then((res) => {
       if (res.error) {
         setError(res.error.message);
         setLoading(false);
@@ -44,7 +43,7 @@ export default function UserDashboardPage() {
       }
       setLoading(false);
     });
-  }, [datasetId, cardId]);
+  }, [cardId]);
 
   if (loading) {
     return (
@@ -71,47 +70,56 @@ export default function UserDashboardPage() {
   return (
     <>
       <Head>
-        <title>{cardId} – Impulse Finance</title>
+        <title>{cardId} – Spendly</title>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </Head>
-      <main style={{ minHeight: "100vh", padding: "2rem", maxWidth: 1000, margin: "0 auto" }}>
-        <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Behaviour analysis</h1>
-        <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", marginBottom: "1.5rem" }}>Card: {cardId}</p>
+      <main className="appShell">
+        <header className="appHeader">
+          <div>
+            <h1 className="appTitle">User profile</h1>
+            <p className="appSubtitle">
+              Card: <strong>{cardId}</strong> · Interpretable behavioural indicators (not a diagnosis)
+            </p>
+          </div>
+          <Link href="/dashboard" className="pill">
+            Back to users
+          </Link>
+        </header>
 
-        <section style={{ marginBottom: "2rem" }} aria-label="Risk score">
-          <ScoreGauge score={analysis.risk_score} riskBand={analysis.risk_band} />
-        </section>
-
-        <section style={{ marginBottom: "2rem" }} aria-label="Behaviour profile">
-          <ProfileBadge profile={analysis.profile} />
-        </section>
-
-        <section style={{ marginBottom: "2rem" }} aria-label="Top drivers">
-          <DriverBreakdown breakdown={analysis.score_breakdown} topDrivers={analysis.top_drivers} />
-        </section>
-
-        {analysis.evidence && analysis.evidence.length > 0 && (
-          <section style={{ marginBottom: "2rem" }} aria-label="Evidence">
-            <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>Evidence</h2>
-            <ul style={{ listStyle: "none", color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
-              {analysis.evidence.map((line, i) => (
-                <li key={i} style={{ marginBottom: "0.25rem" }}>{line}</li>
-              ))}
-            </ul>
+        <div className="appGrid" style={{ gridTemplateColumns: "1fr" }}>
+          <section className="card panel" aria-label="Risk score">
+            <ScoreGauge score={analysis.risk_score} riskBand={analysis.risk_band} />
           </section>
-        )}
 
-        <section style={{ marginBottom: "2rem" }} aria-label="Nudges">
-          <NudgeCards nudges={nudgeList} />
-        </section>
+          <section className="card panel" aria-label="Behaviour profile">
+            <ProfileBadge profile={analysis.profile} />
+          </section>
 
-        <section style={{ marginBottom: "2rem" }} aria-label="Charts">
-          <ChartsPanel chartSeries={analysis.chart_series} />
-        </section>
+          <section className="card panel" aria-label="Top drivers">
+            <DriverBreakdown breakdown={analysis.score_breakdown} topDrivers={analysis.top_drivers} />
+          </section>
 
-        <Link href={`/dashboard?dataset_id=${encodeURIComponent(datasetId || "")}`} style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
-          Back to user list
-        </Link>
+          {analysis.evidence && analysis.evidence.length > 0 && (
+            <section className="card panel" aria-label="Evidence">
+              <h2 className="panelTitle">Evidence</h2>
+              <ul style={{ listStyle: "none", color: "var(--color-text-muted)", fontSize: "0.95rem" }}>
+                {analysis.evidence.map((line, i) => (
+                  <li key={i} style={{ marginBottom: "0.35rem" }}>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="card panel" aria-label="Nudges">
+            <NudgeCards nudges={nudgeList} />
+          </section>
+
+          <section className="card panel" aria-label="Charts">
+            <ChartsPanel chartSeries={analysis.chart_series} />
+          </section>
+        </div>
       </main>
     </>
   );

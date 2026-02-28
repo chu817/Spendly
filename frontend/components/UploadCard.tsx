@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { uploadDataset, useDemoDataset } from "@/lib/api";
+import { uploadDataset, useDemoDataset, trainDataset } from "@/lib/api";
 
 interface UploadCardProps {
   onSuccess: (
@@ -10,6 +10,7 @@ interface UploadCardProps {
 
 export default function UploadCard({ onSuccess }: UploadCardProps) {
   const [loading, setLoading] = useState(false);
+  const [training, setTraining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,7 +25,15 @@ export default function UploadCard({ onSuccess }: UploadCardProps) {
       return;
     }
     const d = result.data;
-    if (d) onSuccess(d.dataset_id, { rows: d.rows, users: d.users, dateRange: d.date_range });
+    if (!d) return;
+    setTraining(true);
+    const trained = await trainDataset(d.dataset_id);
+    setTraining(false);
+    if (trained.error) {
+      setError(trained.error.message || "Training failed");
+      return;
+    }
+    onSuccess(d.dataset_id, { rows: d.rows, users: d.users, dateRange: d.date_range });
   };
 
   const handleDemo = async () => {
@@ -37,7 +46,15 @@ export default function UploadCard({ onSuccess }: UploadCardProps) {
       return;
     }
     const d = result.data;
-    if (d) onSuccess(d.dataset_id, { rows: d.rows, users: d.users, dateRange: d.date_range });
+    if (!d) return;
+    setTraining(true);
+    const trained = await trainDataset(d.dataset_id);
+    setTraining(false);
+    if (trained.error) {
+      setError(trained.error.message || "Training failed");
+      return;
+    }
+    onSuccess(d.dataset_id, { rows: d.rows, users: d.users, dateRange: d.date_range });
   };
 
   return (
@@ -87,6 +104,11 @@ export default function UploadCard({ onSuccess }: UploadCardProps) {
           Use demo dataset
         </button>
       </div>
+      {training && (
+        <p style={{ color: "var(--color-text-muted)", fontSize: "0.9rem" }}>
+          Training dataset model… (this may take a minute)
+        </p>
+      )}
       {error && (
         <p style={{ color: "var(--color-risk-critical)", fontSize: "0.9rem" }} role="alert">
           {error}
